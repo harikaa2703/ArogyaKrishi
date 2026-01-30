@@ -6,8 +6,10 @@ import '../models/nearby_alert.dart';
 
 /// API Service for ArogyaKrishi backend
 class ApiService {
-  // TODO: Update with actual backend URL
-  static const String baseUrl = 'http://localhost:8000';
+  // Use your computer's local IP for physical device
+  // Use 10.0.2.2 for Android emulator
+  // Change this to match your network setup
+  static const String baseUrl = 'http://192.168.137.227:8001';
 
   /// Upload image for disease detection
   ///
@@ -23,14 +25,31 @@ class ApiService {
     double? lng,
   }) async {
     try {
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/detect-image'),
-      );
+      final url = '$baseUrl/api/detect-image';
+      print('🌐 API Request: POST $url');
+      print('📁 Image path: ${imageFile.path}');
+      print('📍 Location: lat=$lat, lng=$lng');
 
-      // Add image file
+      var request = http.MultipartRequest('POST', Uri.parse(url));
+
+      // Determine content type from file extension
+      String contentType = 'image/jpeg';
+      if (imageFile.path.toLowerCase().endsWith('.png')) {
+        contentType = 'image/png';
+      } else if (imageFile.path.toLowerCase().endsWith('.jpg') ||
+          imageFile.path.toLowerCase().endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+      }
+
+      print('📷 Content-Type: $contentType');
+
+      // Add image file with explicit content type
       request.files.add(
-        await http.MultipartFile.fromPath('image', imageFile.path),
+        await http.MultipartFile.fromPath(
+          'image',
+          imageFile.path,
+          contentType: http.MediaType.parse(contentType),
+        ),
       );
 
       // Add optional location data
@@ -39,20 +58,27 @@ class ApiService {
         request.fields['lng'] = lng.toString();
       }
 
+      print('📤 Sending request...');
       // Send request
       var streamedResponse = await request.send();
       var response = await http.Response.fromStream(streamedResponse);
+
+      print('📥 Response status: ${response.statusCode}');
+      print(
+        '📥 Response body: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}',
+      );
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body) as Map<String, dynamic>;
         return DetectionResult.fromJson(jsonData);
       } else {
         throw ApiException(
-          'Failed to detect disease: ${response.statusCode}',
+          'Failed to detect disease: ${response.statusCode} - ${response.body}',
           response.statusCode,
         );
       }
     } catch (e) {
+      print('❌ API Error: $e');
       throw ApiException('Network error: $e', 0);
     }
   }
@@ -70,7 +96,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/nearby-alerts?lat=$lat&lng=$lng'),
+        Uri.parse('$baseUrl/api/nearby-alerts?lat=$lat&lng=$lng'),
       );
 
       if (response.statusCode == 200) {

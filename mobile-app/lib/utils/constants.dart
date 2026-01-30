@@ -1,7 +1,7 @@
 /// Constants for the ArogyaKrishi app
 class AppConstants {
   // API Configuration
-  static const String apiBaseUrl = 'http://localhost:8000';
+  static const String apiBaseUrl = 'http://192.168.137.227:8001';
 
   // App Information
   static const String appName = 'ArogyaKrishi';

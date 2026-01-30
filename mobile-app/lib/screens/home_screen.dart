@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/image_service.dart';
+import '../services/api_service.dart';
 import '../services/offline_detector.dart';
+import '../models/detection_result.dart';
 import 'offline_detection_screen.dart';
 
 /// Home screen with image capture/selection and preview
@@ -14,9 +16,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ImageService _imageService = ImageService();
+  final ApiService _apiService = ApiService();
 
   File? _selectedImage;
-  final bool _isLoading = false;
+  bool _isLoading = false;
   String? _errorMessage;
   bool _isOnline = true;
 
@@ -158,6 +161,113 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const OfflineDetectionScreen()),
+    );
+  }
+
+  /// Call backend API to detect disease from image
+  Future<void> _detectDisease() async {
+    if (_selectedImage == null) {
+      setState(() {
+        _errorMessage = 'No image selected';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _apiService.detectImage(imageFile: _selectedImage!);
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Show result dialog
+      if (mounted) {
+        _showDetectionResultDialog(result);
+      }
+    } on ApiException catch (e) {
+      setState(() {
+        _errorMessage = 'Detection failed: ${e.message}';
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Unexpected error: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  /// Show detection result in dialog
+  void _showDetectionResultDialog(DetectionResult result) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Detection Result'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildResultRow('Crop', result.crop),
+                _buildResultRow('Disease', result.disease),
+                _buildResultRow(
+                  'Confidence',
+                  '${(result.confidence * 100).toStringAsFixed(1)}%',
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Remedies:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: result.remedies.map((remedy) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text('• $remedy'),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Helper to build result row
+  Widget _buildResultRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(value),
+        ],
+      ),
     );
   }
 
@@ -379,13 +489,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_isOnline)
                   if (_selectedImage != null)
                     ElevatedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              // TODO: Implement detect functionality in F4
-                            },
-                      icon: const Icon(Icons.analytics),
-                      label: const Text('Detect Disease'),
+                      onPressed: _isLoading ? null : _detectDisease,
+                      icon: _isLoading
+                          ? SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Theme.of(context).primaryColor,
+                                ),
+                              ),
+                            )
+                          : const Icon(Icons.analytics),
+                      label: Text(
+                        _isLoading ? 'Detecting...' : 'Detect Disease',
+                      ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
