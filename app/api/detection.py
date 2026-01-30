@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 import httpx
 
+from ..config import settings
 from ..models.schemas import (
     DetectImageResponse,
     NearbyAlertsResponse,

@@ -11,6 +11,7 @@ import time as _time
 
 from app.config import settings
 from app.db.session import engine, Base
+from sqlalchemy import text
 from app.services.ml_service import load_models
 from app.services.remedy_service import load_remedies
 from app.api.detection import router as detection_router
@@ -53,6 +54,9 @@ async def on_startup() -> None:
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR")
+            )
         logger.info("Database initialized")
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
