@@ -35,6 +35,21 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # HTTP client for API calls
+  http: ^1.2.0
+
+  # Image picker for camera/gallery
+  image_picker: ^1.0.7
+
+  # Image compression
+  flutter_image_compress: ^2.1.0
+
+  # Permission handling
+  permission_handler: ^12.0.1
+
+  # Device info
+  device_info_plus: ^10.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
