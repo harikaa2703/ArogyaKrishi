@@ -7,6 +7,8 @@ from ..utils.image_processor import preprocess_image
 from .ml_service import get_model_loader
 from .remedy_service import RemedyService
 from .detection_repository import DetectionRepository
+from .user_repository import UserRepository
+from .notification_service import send_push_notification
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +67,57 @@ class DetectionService:
                         latitude=latitude,
                         longitude=longitude
                     )
+                    await DetectionService._notify_nearby_users(
+                        disease=disease,
+                        latitude=latitude,
+                        longitude=longitude,
+                        db_session=db_session,
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to save detection event: {e}")
+                async def _notify_nearby_users(
+                    disease: str,
+                    latitude: Optional[float],
+                    longitude: Optional[float],
+                    db_session: AsyncSession,
+                    radius_km: float = 10.0,
+                ) -> None:
+                    """Send soft alerts to nearby users (stub push)."""
+                    if latitude is None or longitude is None:
+                        return
+
+                    users = await UserRepository.get_users_within_radius(
+                        db_session,
+                        latitude=latitude,
+                        longitude=longitude,
+                        radius_km=radius_km,
+                    )
+
+                    title = "Nearby crop health advisory"
+                    body = (
+                        f"A nearby report mentioned {disease}. "
+                        "Please monitor your crop and follow recommended practices."
+                    )
+
+                    for user in users:
+                        if not user.device_token:
+                            continue
+                        recently_sent = await UserRepository.was_alert_sent(
+                            db_session,
+                            user_id=user.id,
+                            disease=disease,
+                            within_hours=6,
+                        )
+                        if recently_sent:
+                            continue
+
+                        sent = await send_push_notification(user.device_token, title, body)
+                        if sent:
+                            await UserRepository.log_alert(
+                                db_session,
+                                user_id=user.id,
+                                disease=disease,
+                            )
             
             # Build response with translated content
             response = {

@@ -55,3 +55,53 @@ Response:
 	"feedback": "string"
 }
 ```
+
+GET /suggested-treatments
+Request:
+
+- query params
+  - disease (required)
+  - language (optional)
+  - lat (required for real-time stores)
+  - lng (required for real-time stores)
+
+Response:
+
+```json
+{
+  "disease": "string",
+  "language": "en|te|hi|kn|ml",
+  "remedies": ["string"],
+  "stores": [
+    {
+      "name": "string",
+      "address": "string | null",
+      "phone": "string | null",
+      "latitude": float,
+      "longitude": float,
+      "distance_km": float | null
+    }
+  ]
+}
+```
+
+Notes:
+
+- Real-time store lookup uses OpenStreetMap Overpass API (no API key required).
+
+POST /register-device
+Request:
+
+- JSON body
+  - device_token (required)
+  - latitude (required)
+  - longitude (required)
+  - notifications_enabled (optional, default true)
+
+Response:
+
+```json
+{
+	"ok": true
+}
+```

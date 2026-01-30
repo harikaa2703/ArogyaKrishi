@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     # LLM (optional)
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
+
     
     class Config:
         env_file = ".env"

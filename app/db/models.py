@@ -50,6 +50,7 @@ class User(Base):
     longitude = Column(Float, nullable=False)
     device_token = Column(String, nullable=True, index=True)
     notifications_enabled = Column(Boolean, nullable=False, default=True)
+    language = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationship to sent alerts
