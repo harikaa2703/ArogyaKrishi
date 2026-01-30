@@ -47,15 +47,17 @@ class ImageAssetService {
   ///
   /// Parameters:
   /// - symptomId: The symptom ID (used to construct image path)
+  /// - imagePath: Optional custom image path (takes precedence over symptomId)
   /// - symptomName: The symptom name (used in fallback)
   /// - size: Size of the image (default 100)
   static Widget buildSymptomImage({
     required String symptomId,
+    String? imagePath,
     required String symptomName,
     double size = 100,
   }) {
     return _buildImageWithFallback(
-      imagePath: getSymptomImagePath(symptomId),
+      imagePath: imagePath ?? getSymptomImagePath(symptomId),
       fallbackIcon: Icons.health_and_safety,
       fallbackLabel: _getInitials(symptomName),
       fallbackName: symptomName,

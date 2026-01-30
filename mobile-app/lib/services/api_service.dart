@@ -3,13 +3,14 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/detection_result.dart';
 import '../models/nearby_alert.dart';
+import '../utils/constants.dart';
 
 /// API Service for ArogyaKrishi backend
 class ApiService {
   // Use your computer's local IP for physical device
   // Use 10.0.2.2 for Android emulator
   // Change this to match your network setup
-  static const String baseUrl = 'http://192.168.137.227:8001';
+  static const String baseUrl = AppConstants.apiBaseUrl;
 
   /// Upload image for disease detection
   ///
@@ -17,20 +18,29 @@ class ApiService {
   /// - [imageFile]: Image file to analyze
   /// - [lat]: Optional latitude for location
   /// - [lng]: Optional longitude for location
+  /// - [language]: Optional language code (en, te, hi)
   ///
   /// Returns: DetectionResult with crop, disease, confidence, and remedies
   Future<DetectionResult> detectImage({
     required File imageFile,
     double? lat,
     double? lng,
+    String? language,
   }) async {
     try {
-      final url = '$baseUrl/api/detect-image';
+      final uri = Uri.parse('$baseUrl/api/detect-image').replace(
+        queryParameters: {
+          if (language != null) 'language': language,
+          if (lat != null) 'lat': lat.toString(),
+          if (lng != null) 'lng': lng.toString(),
+        },
+      );
+      final url = uri.toString();
       print('🌐 API Request: POST $url');
       print('📁 Image path: ${imageFile.path}');
       print('📍 Location: lat=$lat, lng=$lng');
 
-      var request = http.MultipartRequest('POST', Uri.parse(url));
+      var request = http.MultipartRequest('POST', uri);
 
       // Determine content type from file extension
       String contentType = 'image/jpeg';
@@ -51,12 +61,6 @@ class ApiService {
           contentType: http.MediaType.parse(contentType),
         ),
       );
-
-      // Add optional location data
-      if (lat != null && lng != null) {
-        request.fields['lat'] = lat.toString();
-        request.fields['lng'] = lng.toString();
-      }
 
       print('📤 Sending request...');
       // Send request

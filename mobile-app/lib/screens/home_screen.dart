@@ -5,6 +5,8 @@ import '../services/api_service.dart';
 import '../services/offline_detector.dart';
 import '../models/detection_result.dart';
 import 'offline_detection_screen.dart';
+import '../utils/constants.dart';
+import '../utils/localization.dart';
 
 /// Home screen with image capture/selection and preview
 class HomeScreen extends StatefulWidget {
@@ -17,16 +19,46 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ImageService _imageService = ImageService();
   final ApiService _apiService = ApiService();
+  final LocalizationService _localizationService = LocalizationService();
 
   File? _selectedImage;
   bool _isLoading = false;
   String? _errorMessage;
   bool _isOnline = true;
+  String _languageCode = AppConstants.fallbackLanguageCode;
+  Map<String, String> _strings = {};
+  List<LanguagePack> _languagePacks = [];
 
   @override
   void initState() {
     super.initState();
     _checkConnectivity();
+    _loadLocalizationPacks();
+  }
+
+  Future<void> _loadLocalizationPacks() async {
+    await _localizationService.loadAll();
+    final packs = _localizationService.languagePacks;
+    if (!mounted) return;
+    setState(() {
+      _languagePacks = packs;
+      if (!_localizationService.hasLanguage(_languageCode) &&
+          packs.isNotEmpty) {
+        _languageCode = packs.first.code;
+      }
+      _strings = _localizationService.getPack(_languageCode)?.strings ?? {};
+    });
+  }
+
+  void _setLanguage(String code) {
+    setState(() {
+      _languageCode = code;
+      _strings = _localizationService.getPack(_languageCode)?.strings ?? {};
+    });
+  }
+
+  String _t(String key) {
+    return _strings[key] ?? _localizationService.translate(_languageCode, key);
   }
 
   /// Check initial connectivity and listen for changes
@@ -54,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.camera_alt),
-                title: const Text('Take Photo'),
+                title: Text(_t('take_photo')),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromCamera();
@@ -62,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from Gallery'),
+                title: Text(_t('choose_from_gallery')),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImageFromGallery();
@@ -125,22 +157,19 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Permission Required'),
-          content: const Text(
-            'Camera and storage permissions are required to capture and select images. '
-            'Please grant permissions in app settings.',
-          ),
+          title: Text(_t('permission_required')),
+          content: Text(_t('permission_body')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(_t('cancel')),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _imageService.openSystemSettings();
               },
-              child: const Text('Open Settings'),
+              child: Text(_t('open_settings')),
             ),
           ],
         );
@@ -160,7 +189,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _goToOfflineMode() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const OfflineDetectionScreen()),
+      MaterialPageRoute(
+        builder: (context) =>
+            OfflineDetectionScreen(initialLanguageCode: _languageCode),
+      ),
     );
   }
 
@@ -168,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _detectDisease() async {
     if (_selectedImage == null) {
       setState(() {
-        _errorMessage = 'No image selected';
+        _errorMessage = _t('no_image_selected');
       });
       return;
     }
@@ -179,7 +211,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final result = await _apiService.detectImage(imageFile: _selectedImage!);
+      final result = await _apiService.detectImage(
+        imageFile: _selectedImage!,
+        language: _languageCode,
+      );
 
       setState(() {
         _isLoading = false;
@@ -191,12 +226,12 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } on ApiException catch (e) {
       setState(() {
-        _errorMessage = 'Detection failed: ${e.message}';
+        _errorMessage = '${_t('error_detection_failed')}: ${e.message}';
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Unexpected error: $e';
+        _errorMessage = '${_t('unexpected_error')}: $e';
         _isLoading = false;
       });
     }
@@ -208,22 +243,22 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Detection Result'),
+          title: Text(_t('detection_result')),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildResultRow('Crop', result.crop),
-                _buildResultRow('Disease', result.disease),
+                _buildResultRow(_t('crop'), result.crop),
+                _buildResultRow(_t('disease'), result.disease),
                 _buildResultRow(
-                  'Confidence',
+                  _t('confidence'),
                   '${(result.confidence * 100).toStringAsFixed(1)}%',
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Remedies:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text(
+                  '${_t('remedies')}:',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Column(
@@ -241,7 +276,7 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              child: Text(_t('close')),
             ),
           ],
         );
@@ -275,15 +310,31 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('ArogyaKrishi'),
+        title: Text(_t('app_title')),
         centerTitle: true,
         actions: [
+          if (_languagePacks.isNotEmpty)
+            PopupMenuButton<String>(
+              onSelected: _setLanguage,
+              tooltip: _t('select_language'),
+              icon: const Icon(Icons.language),
+              itemBuilder: (context) {
+                return _languagePacks
+                    .map(
+                      (pack) => PopupMenuItem<String>(
+                        value: pack.code,
+                        child: Text(pack.name),
+                      ),
+                    )
+                    .toList();
+              },
+            ),
           // Connection status indicator
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             child: Center(
               child: Tooltip(
-                message: _isOnline ? 'Online' : 'Offline Mode',
+                message: _isOnline ? _t('online') : _t('offline_mode'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -305,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        _isOnline ? 'Online' : 'Offline',
+                        _isOnline ? _t('online') : _t('offline'),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -346,14 +397,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'You are Offline',
+                                _t('you_are_offline'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.orange[700],
                                 ),
                               ),
                               Text(
-                                'Using offline diagnosis mode',
+                                _t('using_offline_mode'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.orange[600],
@@ -372,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Quick Actions',
+                        _t('quick_actions'),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
@@ -380,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ElevatedButton.icon(
                         onPressed: _goToOfflineMode,
                         icon: const Icon(Icons.eco),
-                        label: const Text('Offline Diagnosis'),
+                        label: Text(_t('offline_diagnosis')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green[700],
                           foregroundColor: Colors.white,
@@ -442,7 +493,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Disease Detection',
+                            _t('disease_detection'),
                             style: TextStyle(
                               fontSize: 18,
                               color: Colors.grey[600],
@@ -451,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Take a photo or select from gallery',
+                            _t('take_photo_or_gallery'),
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[500],
@@ -502,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             )
                           : const Icon(Icons.analytics),
                       label: Text(
-                        _isLoading ? 'Detecting...' : 'Detect Disease',
+                        _isLoading ? _t('detecting') : _t('detect_disease'),
                       ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -515,7 +566,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ElevatedButton.icon(
                           onPressed: _showImageSourceDialog,
                           icon: const Icon(Icons.add_a_photo),
-                          label: const Text('Select Image'),
+                          label: Text(_t('select_image')),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -527,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         OutlinedButton.icon(
                           onPressed: _goToOfflineMode,
                           icon: const Icon(Icons.eco),
-                          label: const Text('Or Use Offline Mode'),
+                          label: Text(_t('or_use_offline_mode')),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(

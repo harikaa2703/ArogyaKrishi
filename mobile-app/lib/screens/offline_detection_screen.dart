@@ -1,28 +1,97 @@
 import 'package:flutter/material.dart';
 import '../services/mock_data_service.dart';
 import '../services/image_asset_service.dart';
+import '../utils/constants.dart';
+import '../utils/localization.dart';
 
 /// Offline detection screen with crop -> symptom -> disease -> remedy flow
 class OfflineDetectionScreen extends StatefulWidget {
-  const OfflineDetectionScreen({super.key});
+  final String? initialLanguageCode;
+
+  const OfflineDetectionScreen({super.key, this.initialLanguageCode});
 
   @override
   State<OfflineDetectionScreen> createState() => _OfflineDetectionScreenState();
 }
 
 class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
+  final LocalizationService _localizationService = LocalizationService();
+
+  String _languageCode = AppConstants.fallbackLanguageCode;
+  Map<String, String> _strings = {};
+  List<LanguagePack> _languagePacks = [];
+
   // Navigation state
   Crop? _selectedCrop;
   List<Symptom> _selectedSymptoms = [];
   Disease? _detectedDisease;
 
   @override
+  void initState() {
+    super.initState();
+    _languageCode =
+        widget.initialLanguageCode ?? AppConstants.fallbackLanguageCode;
+    _loadLocalizationPacks();
+  }
+
+  Future<void> _loadLocalizationPacks() async {
+    await _localizationService.loadAll();
+    final packs = _localizationService.languagePacks;
+    if (!mounted) return;
+    setState(() {
+      _languagePacks = packs;
+      if (!_localizationService.hasLanguage(_languageCode) &&
+          packs.isNotEmpty) {
+        _languageCode = packs.first.code;
+      }
+      _strings = _localizationService.getPack(_languageCode)?.strings ?? {};
+    });
+  }
+
+  void _setLanguage(String code) {
+    setState(() {
+      _languageCode = code;
+      _strings = _localizationService.getPack(_languageCode)?.strings ?? {};
+    });
+  }
+
+  String _t(String key) {
+    return _strings[key] ?? _localizationService.translate(_languageCode, key);
+  }
+
+  String _tWithVars(String key, Map<String, String> vars) {
+    var value = _t(key);
+    vars.forEach((k, v) {
+      value = value.replaceAll('{$k}', v);
+    });
+    return value;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Offline Diagnosis'),
+        title: Text(_t('offline_diagnosis')),
         centerTitle: true,
         elevation: 0,
+        actions: [
+          if (_languagePacks.isNotEmpty)
+            PopupMenuButton<String>(
+              onSelected: _setLanguage,
+              tooltip: _t('select_language'),
+              icon: const Icon(Icons.language),
+              itemBuilder: (context) {
+                return _languagePacks
+                    .map(
+                      (pack) => PopupMenuItem<String>(
+                        value: pack.code,
+                        child: Text(pack.name),
+                      ),
+                    )
+                    .toList();
+              },
+            ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -49,7 +118,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
 
   /// Step 1: Select Crop
   Widget _buildCropSelection() {
-    final crops = MockDataService.getCrops();
+    final crops = OfflineMockDataService.getCrops();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -60,14 +129,14 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
           children: [
             const SizedBox(height: 16),
             Text(
-              'Select Your Crop',
+              _t('offline_select_crop_title'),
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              'What crop are you growing?',
+              _t('offline_select_crop_subtitle'),
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
@@ -130,12 +199,12 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                 children: [
                   ImageAssetService.buildCropImage(
                     cropId: crop.id,
-                    cropName: crop.name,
+                    cropName: _t(crop.nameKey),
                     size: 80,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    crop.name,
+                    _t(crop.nameKey),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -154,20 +223,20 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
 
   /// Step 2: Select Symptoms
   Widget _buildSymptomSelection() {
-    final availableDiseases = MockDataService.getDiseasesForCrop(
+    final availableDiseases = OfflineMockDataService.getDiseasesForCrop(
       _selectedCrop!.id,
     );
 
     // Get all possible symptoms from diseases for this crop
     final possibleSymptoms = <Symptom>{};
     for (var disease in availableDiseases) {
-      final symptoms = MockDataService.getSymptomsForDisease(disease.id);
+      final symptoms = OfflineMockDataService.getSymptomsForDisease(disease.id);
       possibleSymptoms.addAll(symptoms);
     }
 
     // Convert to sorted list for consistent ordering
     final symptomList = possibleSymptoms.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort((a, b) => _t(a.nameKey).compareTo(_t(b.nameKey)));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -189,13 +258,13 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'What Symptoms?',
+                    _t('offline_identify_symptoms_title'),
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    _selectedCrop!.name,
+                    _t(_selectedCrop!.nameKey),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.green[700],
                       fontWeight: FontWeight.w600,
@@ -208,114 +277,198 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Select all symptoms you observe:',
+          _tWithVars('offline_symptom_prompt', {
+            'crop': _t(_selectedCrop!.nameKey),
+          }),
           style: Theme.of(
             context,
           ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
         ),
         const SizedBox(height: 24),
 
-        // Symptoms checklist
-        for (final symptom in symptomList)
-          Builder(
-            builder: (context) {
-              final isSelected = _selectedSymptoms.contains(symptom);
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Card(
-                  elevation: isSelected ? 4 : 0,
-                  color: isSelected ? Colors.green[50] : Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(
-                      color: isSelected
-                          ? Colors.green[600]!
-                          : Colors.grey[300]!,
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: ListTile(
-                    leading: SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: Stack(
-                        children: [
-                          ImageAssetService.buildSymptomImage(
-                            symptomId: symptom.id,
-                            symptomName: symptom.name,
-                            size: 60,
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Checkbox(
-                              value: isSelected,
-                              onChanged: (value) {
-                                setState(() {
-                                  if (value == true) {
-                                    _selectedSymptoms.add(symptom);
-                                  } else {
-                                    _selectedSymptoms.remove(symptom);
-                                  }
-                                });
-                              },
-                              activeColor: Colors.green[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    title: Text(
-                      symptom.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(symptom.description),
-                    onTap: () {
-                      setState(() {
-                        if (isSelected) {
-                          _selectedSymptoms.remove(symptom);
-                        } else {
-                          _selectedSymptoms.add(symptom);
-                        }
-                      });
-                    },
-                  ),
-                ),
-              );
-            },
+        // Symptoms grid - image-centric
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 1.0,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
           ),
+          itemCount: symptomList.length,
+          itemBuilder: (context, index) {
+            final symptom = symptomList[index];
+            final isSelected = _selectedSymptoms.contains(symptom);
+            return _buildSymptomCard(symptom, isSelected);
+          },
+        ),
 
         const SizedBox(height: 24),
 
         // Analyze button
         if (_selectedSymptoms.isNotEmpty)
-          ElevatedButton.icon(
-            onPressed: _analyzeSymptoms,
-            icon: const Icon(Icons.search),
-            label: const Text('Analyze Symptoms'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[700],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green[300]!),
+                ),
+                child: Text(
+                  _tWithVars('offline_selected_symptoms', {
+                    'symptoms': _selectedSymptoms
+                        .map((s) => _t(s.nameKey))
+                        .join(', '),
+                  }),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.green[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _analyzeSymptoms,
+                icon: const Icon(Icons.search),
+                label: Text(_t('offline_analyze_symptoms')),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
           )
         else
-          ElevatedButton(
-            onPressed: null,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
             ),
-            child: const Text('Select symptoms to continue'),
+            child: Text(
+              _t('offline_select_symptoms_hint'),
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+            ),
           ),
 
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildSymptomCard(Symptom symptom, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (isSelected) {
+            _selectedSymptoms.remove(symptom);
+          } else {
+            _selectedSymptoms.add(symptom);
+          }
+        });
+      },
+      child: Card(
+        elevation: isSelected ? 4 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: isSelected ? Colors.green[600]! : Colors.grey[300]!,
+            width: isSelected ? 3 : 1,
+          ),
+        ),
+        color: isSelected ? Colors.green[50] : Colors.white,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Image background
+            ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: ImageAssetService.buildSymptomImage(
+                symptomId: symptom.id,
+                imagePath: symptom.imagePath,
+                symptomName: _t(symptom.nameKey),
+                size: 200,
+              ),
+            ),
+            // Gradient overlay
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(11),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.4),
+                  ],
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Checkmark indicator
+                  if (isSelected)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.green[600],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  // Text at bottom
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _t(symptom.nameKey),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _t(symptom.descriptionKey),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -364,7 +517,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Possible Disease',
+                            _t('offline_possible_disease'),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: Colors.orange[700],
@@ -373,7 +526,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            disease.name,
+                            _t(disease.nameKey),
                             style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
@@ -384,7 +537,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  disease.description,
+                  _t(disease.descriptionKey),
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -396,14 +549,14 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
 
         // Remedies section
         Text(
-          'Recommended Remedies',
+          _t('offline_recommended_remedies'),
           style: Theme.of(
             context,
           ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
 
-        for (final entry in disease.remedies.asMap().entries)
+        for (final entry in disease.remedyKeys.asMap().entries)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Card(
@@ -436,7 +589,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        entry.value,
+                        _t(entry.value),
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
@@ -463,7 +616,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'This is an offline diagnosis based on symptoms. Please consult an agricultural expert for confirmation.',
+                  _t('offline_disclaimer'),
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: Colors.blue[700]),
@@ -488,7 +641,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                   });
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text('Start Over'),
+                label: Text(_t('offline_start_over')),
               ),
             ),
             const SizedBox(width: 12),
@@ -497,11 +650,11 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
                 onPressed: () {
                   // TODO: Share functionality
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Share feature coming soon')),
+                    SnackBar(content: Text(_t('offline_share_coming_soon'))),
                   );
                 },
                 icon: const Icon(Icons.share),
-                label: const Text('Share'),
+                label: Text(_t('offline_share')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green[700],
                   foregroundColor: Colors.white,
@@ -518,7 +671,7 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
 
   /// Analyze symptoms and find matching disease
   void _analyzeSymptoms() {
-    final availableDiseases = MockDataService.getDiseasesForCrop(
+    final availableDiseases = OfflineMockDataService.getDiseasesForCrop(
       _selectedCrop!.id,
     );
 
@@ -526,7 +679,9 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
     var diseaseScores = <String, int>{};
 
     for (var disease in availableDiseases) {
-      final diseaseSymptoms = MockDataService.getSymptomsForDisease(disease.id);
+      final diseaseSymptoms = OfflineMockDataService.getSymptomsForDisease(
+        disease.id,
+      );
       int matchCount = 0;
 
       for (var symptom in _selectedSymptoms) {
@@ -550,17 +705,15 @@ class _OfflineDetectionScreenState extends State<OfflineDetectionScreen> {
     });
 
     if (bestMatchId != null && maxMatches > 0) {
-      final disease = MockDataService.getDiseaseById(bestMatchId!);
+      final disease = OfflineMockDataService.getDiseaseById(bestMatchId!);
       setState(() {
         _detectedDisease = disease;
       });
     } else {
       // No match found
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No matching disease found. Please consult an expert.'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_t('offline_no_match'))));
     }
   }
 }

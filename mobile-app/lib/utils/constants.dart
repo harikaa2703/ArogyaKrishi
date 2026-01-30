@@ -1,19 +1,21 @@
 /// Constants for the ArogyaKrishi app
 class AppConstants {
   // API Configuration
-  static const String apiBaseUrl = 'http://192.168.137.227:8001';
+  static const String apiBaseUrl = 'http://10.217.3.160:8001';
 
   // App Information
   static const String appName = 'ArogyaKrishi';
   static const String appVersion = '1.0.0';
 
-  // Supported Languages
-  static const List<String> supportedLanguages = ['en', 'te', 'hi'];
-  static const Map<String, String> languageNames = {
-    'en': 'English',
-    'te': 'Telugu',
-    'hi': 'Hindi',
-  };
+  // Supported Languages (add a new language by adding a file here)
+  static const List<String> languageFiles = [
+    'assets/locales/en.json',
+    'assets/locales/te.json',
+    'assets/locales/hi.json',
+    'assets/locales/kn.json',
+    'assets/locales/ml.json',
+  ];
+  static const String fallbackLanguageCode = 'en';
 
   // Confidence Thresholds
   static const double lowConfidenceThreshold = 0.5;

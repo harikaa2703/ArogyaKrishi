@@ -10,14 +10,10 @@
 
 class Crop {
   final String id;
-  final String name;
+  final String nameKey;
   final String imagePath;
 
-  Crop({
-    required this.id,
-    required this.name,
-    required this.imagePath,
-  });
+  Crop({required this.id, required this.nameKey, required this.imagePath});
 
   @override
   bool operator ==(Object other) =>
@@ -30,27 +26,29 @@ class Crop {
 
 class Symptom {
   final String id;
-  final String name;
-  final String description;
+  final String nameKey;
+  final String descriptionKey;
+  final String imagePath;
 
   Symptom({
     required this.id,
-    required this.name,
-    required this.description,
+    required this.nameKey,
+    required this.descriptionKey,
+    required this.imagePath,
   });
 }
 
 class Disease {
   final String id;
-  final String name;
-  final String description;
-  final List<String> remedies;
+  final String nameKey;
+  final String descriptionKey;
+  final List<String> remedyKeys;
 
   Disease({
     required this.id,
-    required this.name,
-    required this.description,
-    required this.remedies,
+    required this.nameKey,
+    required this.descriptionKey,
+    required this.remedyKeys,
   });
 }
 
@@ -59,75 +57,78 @@ class OfflineMockDataService {
   // CROPS (image = assets/images/crops/<crop>.png)
   // ============================================================
   static const Map<String, Map<String, String>> crops = {
-    'rice': {
-      'name': 'Rice',
-      'image': 'assets/images/crops/rice.png',
-    },
+    'rice': {'nameKey': 'crop.rice', 'image': 'assets/images/crops/rice.png'},
     'wheat': {
-      'name': 'Wheat',
+      'nameKey': 'crop.wheat',
       'image': 'assets/images/crops/wheat.png',
     },
     'maize': {
-      'name': 'Maize',
+      'nameKey': 'crop.maize',
       'image': 'assets/images/crops/maize.png',
     },
     'cotton': {
-      'name': 'Cotton',
+      'nameKey': 'crop.cotton',
       'image': 'assets/images/crops/cotton.png',
     },
     'tomato': {
-      'name': 'Tomato',
+      'nameKey': 'crop.tomato',
       'image': 'assets/images/crops/tomato.png',
     },
     'potato': {
-      'name': 'Potato',
+      'nameKey': 'crop.potato',
       'image': 'assets/images/crops/potato.png',
     },
     'groundnut': {
-      'name': 'Groundnut',
+      'nameKey': 'crop.groundnut',
       'image': 'assets/images/crops/groundnut.png',
     },
     'sugarcane': {
-      'name': 'Sugarcane',
+      'nameKey': 'crop.sugarcane',
       'image': 'assets/images/crops/sugarcane.png',
     },
     'chili': {
-      'name': 'Chili',
+      'nameKey': 'crop.chili',
       'image': 'assets/images/crops/chilli.png',
     },
     'banana': {
-      'name': 'Banana',
+      'nameKey': 'crop.banana',
       'image': 'assets/images/crops/banana.png',
     },
   };
 
   // ============================================================
-  // SYMPTOMS
+  // SYMPTOMS (image = assets/images/symptoms/<symptom>.png)
   // ============================================================
   static const Map<String, Map<String, String>> symptoms = {
     'yellow_leaves': {
-      'name': 'Yellowing of Leaves',
-      'description': 'Leaves gradually turn yellow',
+      'nameKey': 'symptom.yellow_leaves.name',
+      'descriptionKey': 'symptom.yellow_leaves.desc',
+      'image': 'assets/images/symptoms/early_blight.png',
     },
     'brown_spots': {
-      'name': 'Brown Spots',
-      'description': 'Brown or black spots appear on leaves',
+      'nameKey': 'symptom.brown_spots.name',
+      'descriptionKey': 'symptom.brown_spots.desc',
+      'image': 'assets/images/symptoms/early_blight.png',
     },
     'wilting': {
-      'name': 'Wilting',
-      'description': 'Leaves droop and lose firmness',
+      'nameKey': 'symptom.wilting.name',
+      'descriptionKey': 'symptom.wilting.desc',
+      'image': 'assets/images/symptoms/late_blight.png',
     },
     'leaf_curl': {
-      'name': 'Leaf Curling',
-      'description': 'Leaves curl abnormally',
+      'nameKey': 'symptom.leaf_curl.name',
+      'descriptionKey': 'symptom.leaf_curl.desc',
+      'image': 'assets/images/symptoms/leaf_curl_disease.png',
     },
     'stem_lesions': {
-      'name': 'Stem Lesions',
-      'description': 'Dark lesions appear on stem',
+      'nameKey': 'symptom.stem_lesions.name',
+      'descriptionKey': 'symptom.stem_lesions.desc',
+      'image': 'assets/images/symptoms/rice_blast.png',
     },
     'insect_presence': {
-      'name': 'Insect Infestation',
-      'description': 'Insects or larvae visible on plant',
+      'nameKey': 'symptom.insect_presence.name',
+      'descriptionKey': 'symptom.insect_presence.desc',
+      'image': 'assets/images/symptoms/cotton_bollworm.png',
     },
   };
 
@@ -136,85 +137,73 @@ class OfflineMockDataService {
   // ============================================================
   static const Map<String, Map<String, dynamic>> diseases = {
     'rice_blast': {
-      'name': 'Rice Blast',
-      'description': 'Fungal disease causing leaf lesions',
-      'remedies': [
-        'Use resistant varieties',
-        'Maintain proper drainage',
-        'Avoid excess nitrogen',
+      'nameKey': 'disease.rice_blast.name',
+      'descriptionKey': 'disease.rice_blast.desc',
+      'remedyKeys': [
+        'remedy.rice_blast.1',
+        'remedy.rice_blast.2',
+        'remedy.rice_blast.3',
       ],
     },
     'wheat_rust': {
-      'name': 'Wheat Rust',
-      'description': 'Rust-colored pustules on leaves',
-      'remedies': [
-        'Grow resistant varieties',
-        'Remove infected plants',
-      ],
+      'nameKey': 'disease.wheat_rust.name',
+      'descriptionKey': 'disease.wheat_rust.desc',
+      'remedyKeys': ['remedy.wheat_rust.1', 'remedy.wheat_rust.2'],
     },
     'maize_leaf_blight': {
-      'name': 'Maize Leaf Blight',
-      'description': 'Elongated brown lesions on leaves',
-      'remedies': [
-        'Crop rotation',
-        'Field sanitation',
+      'nameKey': 'disease.maize_leaf_blight.name',
+      'descriptionKey': 'disease.maize_leaf_blight.desc',
+      'remedyKeys': [
+        'remedy.maize_leaf_blight.1',
+        'remedy.maize_leaf_blight.2',
       ],
     },
     'cotton_bollworm': {
-      'name': 'Cotton Bollworm',
-      'description': 'Insect pest damaging bolls',
-      'remedies': [
-        'Pheromone traps',
-        'Encourage predators',
-      ],
+      'nameKey': 'disease.cotton_bollworm.name',
+      'descriptionKey': 'disease.cotton_bollworm.desc',
+      'remedyKeys': ['remedy.cotton_bollworm.1', 'remedy.cotton_bollworm.2'],
     },
     'tomato_early_blight': {
-      'name': 'Early Blight',
-      'description': 'Brown concentric rings on leaves',
-      'remedies': [
-        'Remove affected leaves',
-        'Avoid overhead watering',
+      'nameKey': 'disease.tomato_early_blight.name',
+      'descriptionKey': 'disease.tomato_early_blight.desc',
+      'remedyKeys': [
+        'remedy.tomato_early_blight.1',
+        'remedy.tomato_early_blight.2',
       ],
     },
     'potato_late_blight': {
-      'name': 'Late Blight',
-      'description': 'Rapid leaf decay in wet weather',
-      'remedies': [
-        'Improve drainage',
-        'Remove infected plants',
+      'nameKey': 'disease.potato_late_blight.name',
+      'descriptionKey': 'disease.potato_late_blight.desc',
+      'remedyKeys': [
+        'remedy.potato_late_blight.1',
+        'remedy.potato_late_blight.2',
       ],
     },
     'groundnut_leaf_spot': {
-      'name': 'Leaf Spot',
-      'description': 'Spots leading to defoliation',
-      'remedies': [
-        'Crop rotation',
-        'Remove residues',
+      'nameKey': 'disease.groundnut_leaf_spot.name',
+      'descriptionKey': 'disease.groundnut_leaf_spot.desc',
+      'remedyKeys': [
+        'remedy.groundnut_leaf_spot.1',
+        'remedy.groundnut_leaf_spot.2',
       ],
     },
     'sugarcane_red_rot': {
-      'name': 'Red Rot',
-      'description': 'Internal cane discoloration',
-      'remedies': [
-        'Use healthy setts',
-        'Remove infected clumps',
+      'nameKey': 'disease.sugarcane_red_rot.name',
+      'descriptionKey': 'disease.sugarcane_red_rot.desc',
+      'remedyKeys': [
+        'remedy.sugarcane_red_rot.1',
+        'remedy.sugarcane_red_rot.2',
       ],
     },
     'chili_leaf_curl': {
-      'name': 'Leaf Curl Disease',
-      'description': 'Viral disease causing curling',
-      'remedies': [
-        'Control insect vectors',
-        'Remove infected plants',
-      ],
+      'nameKey': 'disease.chili_leaf_curl.name',
+      'descriptionKey': 'disease.chili_leaf_curl.desc',
+      'remedyKeys': ['remedy.chili_leaf_curl.1', 'remedy.chili_leaf_curl.2'],
     },
     'banana_panama': {
-      'name': 'Panama Disease',
-      'description': 'Soil-borne wilt disease',
-      'remedies': [
-        'Use disease-free saplings',
-        'Improve soil drainage',
-      ],
+      'nameKey': 'disease.banana_panama.name',
+      'descriptionKey': 'disease.banana_panama.desc',
+      'remedyKeys': ['remedy.banana_panama.1', 'remedy.banana_panama.2'],
     },
   };
 
@@ -255,19 +244,24 @@ class OfflineMockDataService {
   // ============================================================
 
   static List<Crop> getCrops() => crops.entries
-      .map((e) => Crop(
-            id: e.key,
-            name: e.value['name']!,
-            imagePath: e.value['image']!,
-          ))
+      .map(
+        (e) => Crop(
+          id: e.key,
+          nameKey: e.value['nameKey']!,
+          imagePath: e.value['image']!,
+        ),
+      )
       .toList();
 
   static List<Symptom> getSymptoms() => symptoms.entries
-      .map((e) => Symptom(
-            id: e.key,
-            name: e.value['name']!,
-            description: e.value['description']!,
-          ))
+      .map(
+        (e) => Symptom(
+          id: e.key,
+          nameKey: e.value['nameKey']!,
+          descriptionKey: e.value['descriptionKey']!,
+          imagePath: e.value['image']!,
+        ),
+      )
       .toList();
 
   static List<Disease> getDiseasesForCrop(String cropId) {
@@ -276,9 +270,9 @@ class OfflineMockDataService {
       final d = diseases[id]!;
       return Disease(
         id: id,
-        name: d['name'],
-        description: d['description'],
-        remedies: List<String>.from(d['remedies']),
+        nameKey: d['nameKey'],
+        descriptionKey: d['descriptionKey'],
+        remedyKeys: List<String>.from(d['remedyKeys']),
       );
     }).toList();
   }
@@ -289,9 +283,20 @@ class OfflineMockDataService {
       final s = symptoms[id]!;
       return Symptom(
         id: id,
-        name: s['name']!,
-        description: s['description']!,
+        nameKey: s['nameKey']!,
+        descriptionKey: s['descriptionKey']!,
+        imagePath: s['image']!,
       );
     }).toList();
+  }
+
+  static Disease getDiseaseById(String diseaseId) {
+    final d = diseases[diseaseId]!;
+    return Disease(
+      id: diseaseId,
+      nameKey: d['nameKey'],
+      descriptionKey: d['descriptionKey'],
+      remedyKeys: List<String>.from(d['remedyKeys']),
+    );
   }
 }
