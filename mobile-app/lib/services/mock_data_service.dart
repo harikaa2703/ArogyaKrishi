@@ -1,19 +1,23 @@
-/// Mock data service for offline mode
+/// Offline Mock Data Service for Crop Disease Detection
 ///
-/// This service provides crop, disease, and symptom data for offline detection.
-/// To add or modify data, edit the maps below directly.
+/// Uses crop + symptoms for offline heuristic disease identification.
+/// Images are mapped ONE-TO-ONE with crops.
 ///
-/// - Crops: Map of crop IDs to crop names
-/// - Symptoms: Map of symptom IDs to symptom names
-/// - Diseases: Map of disease IDs to disease data (name, description, remedies)
-/// - CropDiseases: Maps crops to their associated diseases
-/// - DiseaseSymptoms: Maps diseases to their symptoms
+/// NOTE:
+/// - This is NOT diagnosis
+/// - Remedies are general guidance
+/// - No chemical dosages or guarantees
 
 class Crop {
   final String id;
   final String name;
+  final String imagePath;
 
-  Crop({required this.id, required this.name});
+  Crop({
+    required this.id,
+    required this.name,
+    required this.imagePath,
+  });
 
   @override
   bool operator ==(Object other) =>
@@ -29,22 +33,18 @@ class Symptom {
   final String name;
   final String description;
 
-  Symptom({required this.id, required this.name, required this.description});
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Symptom && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
+  Symptom({
+    required this.id,
+    required this.name,
+    required this.description,
+  });
 }
 
 class Disease {
   final String id;
   final String name;
   final String description;
-  final List<String> remedies; // List of remedy descriptions
+  final List<String> remedies;
 
   Disease({
     required this.id,
@@ -52,258 +52,246 @@ class Disease {
     required this.description,
     required this.remedies,
   });
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Disease && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
 }
 
-class MockDataService {
-  /// ============================================================
-  /// CROPS DATA
-  /// Add or modify crops here
-  /// ============================================================
-  static const Map<String, String> crops = {
-    'rice': 'Rice',
-    'wheat': 'Wheat',
-    'cotton': 'Cotton',
-    'tomato': 'Tomato',
-    'potato': 'Potato',
-    'groundnut': 'Groundnut',
-    'sugarcane': 'Sugarcane',
-    'maize': 'Maize',
+class OfflineMockDataService {
+  // ============================================================
+  // CROPS (image = assets/images/crops/<crop>.png)
+  // ============================================================
+  static const Map<String, Map<String, String>> crops = {
+    'rice': {
+      'name': 'Rice',
+      'image': 'assets/images/crops/rice.png',
+    },
+    'wheat': {
+      'name': 'Wheat',
+      'image': 'assets/images/crops/wheat.png',
+    },
+    'maize': {
+      'name': 'Maize',
+      'image': 'assets/images/crops/maize.png',
+    },
+    'cotton': {
+      'name': 'Cotton',
+      'image': 'assets/images/crops/cotton.png',
+    },
+    'tomato': {
+      'name': 'Tomato',
+      'image': 'assets/images/crops/tomato.png',
+    },
+    'potato': {
+      'name': 'Potato',
+      'image': 'assets/images/crops/potato.png',
+    },
+    'groundnut': {
+      'name': 'Groundnut',
+      'image': 'assets/images/crops/groundnut.png',
+    },
+    'sugarcane': {
+      'name': 'Sugarcane',
+      'image': 'assets/images/crops/sugarcane.png',
+    },
+    'chili': {
+      'name': 'Chili',
+      'image': 'assets/images/crops/chilli.png',
+    },
+    'banana': {
+      'name': 'Banana',
+      'image': 'assets/images/crops/banana.png',
+    },
   };
 
-  /// ============================================================
-  /// SYMPTOMS DATA
-  /// Add or modify symptoms here
-  /// ============================================================
+  // ============================================================
+  // SYMPTOMS
+  // ============================================================
   static const Map<String, Map<String, String>> symptoms = {
     'yellow_leaves': {
-      'name': 'Yellow Leaves',
-      'description': 'Leaves are turning yellow',
+      'name': 'Yellowing of Leaves',
+      'description': 'Leaves gradually turn yellow',
     },
     'brown_spots': {
       'name': 'Brown Spots',
-      'description': 'Brown spots or patches on leaves',
+      'description': 'Brown or black spots appear on leaves',
     },
     'wilting': {
       'name': 'Wilting',
-      'description': 'Plant leaves wilting or drooping',
+      'description': 'Leaves droop and lose firmness',
     },
-    'powdery_coating': {
-      'name': 'Powdery Coating',
-      'description': 'White or grayish powdery coating on leaves',
+    'leaf_curl': {
+      'name': 'Leaf Curling',
+      'description': 'Leaves curl abnormally',
     },
-    'root_rot': {
-      'name': 'Root Rot',
-      'description': 'Roots appear black or mushy',
+    'stem_lesions': {
+      'name': 'Stem Lesions',
+      'description': 'Dark lesions appear on stem',
     },
-    'leaf_curl': {'name': 'Leaf Curl', 'description': 'Leaves curling inward'},
-    'stem_rot': {
-      'name': 'Stem Rot',
-      'description': 'Stem showing dark discoloration',
-    },
-    'aphids': {
-      'name': 'Aphids/Insects',
-      'description': 'Small insects visible on plants',
+    'insect_presence': {
+      'name': 'Insect Infestation',
+      'description': 'Insects or larvae visible on plant',
     },
   };
 
-  /// ============================================================
-  /// DISEASES DATA
-  /// Add or modify diseases here
-  /// Format: 'disease_id': {'name': 'Disease Name', 'description': '', 'remedies': [...]}
-  /// ============================================================
+  // ============================================================
+  // DISEASES
+  // ============================================================
   static const Map<String, Map<String, dynamic>> diseases = {
-    'blast': {
-      'name': 'Blast',
-      'description': 'Fungal disease affecting rice',
+    'rice_blast': {
+      'name': 'Rice Blast',
+      'description': 'Fungal disease causing leaf lesions',
       'remedies': [
-        'Spray with Mancozeb (0.2%) or Carbendazim (0.1%)',
-        'Remove infected leaves and burn them',
-        'Ensure proper drainage in fields',
-        'Avoid over-watering and heavy nitrogen application',
+        'Use resistant varieties',
+        'Maintain proper drainage',
+        'Avoid excess nitrogen',
       ],
     },
-    'leaf_spot': {
-      'name': 'Leaf Spot',
-      'description': 'Fungal infection causing spots on leaves',
+    'wheat_rust': {
+      'name': 'Wheat Rust',
+      'description': 'Rust-colored pustules on leaves',
       'remedies': [
-        'Spray Copper Oxychloride (3%) solution',
-        'Remove and destroy infected leaves',
-        'Maintain adequate spacing between plants',
-        'Avoid overhead watering',
+        'Grow resistant varieties',
+        'Remove infected plants',
       ],
     },
-    'powdery_mildew': {
-      'name': 'Powdery Mildew',
-      'description': 'Fungal disease with white powdery coating',
+    'maize_leaf_blight': {
+      'name': 'Maize Leaf Blight',
+      'description': 'Elongated brown lesions on leaves',
       'remedies': [
-        'Spray with Sulfur powder or Karathane',
-        'Ensure good air circulation',
-        'Avoid overcrowding of plants',
-        'Spray in early morning or late evening',
-      ],
-    },
-    'root_rot': {
-      'name': 'Root Rot',
-      'description': 'Fungal infection of roots',
-      'remedies': [
-        'Improve field drainage',
-        'Use Trichoderma treatment on seeds',
-        'Crop rotation recommended',
-        'Avoid waterlogging',
-      ],
-    },
-    'early_blight': {
-      'name': 'Early Blight',
-      'description': 'Common potato and tomato disease',
-      'remedies': [
-        'Remove lower infected leaves',
-        'Spray with Mancozeb (0.2%)',
-        'Maintain spacing for air circulation',
-        'Mulch the soil to prevent splash',
-      ],
-    },
-    'late_blight': {
-      'name': 'Late Blight',
-      'description': 'Severe fungal disease in wet conditions',
-      'remedies': [
-        'Spray with Metalaxyl + Mancozeb',
-        'Improve drainage',
-        'Remove infected plant parts',
-        'Use resistant varieties if available',
-      ],
-    },
-    'yellowing_virus': {
-      'name': 'Yellowing Virus',
-      'description': 'Viral infection causing yellowing',
-      'remedies': [
-        'Remove and destroy infected plants',
-        'Control insect vectors (whiteflies, aphids)',
-        'Use yellow sticky traps',
-        'Maintain crop hygiene',
+        'Crop rotation',
+        'Field sanitation',
       ],
     },
     'cotton_bollworm': {
       'name': 'Cotton Bollworm',
-      'description': 'Insect pest affecting cotton',
+      'description': 'Insect pest damaging bolls',
       'remedies': [
-        'Spray with Cypermethrin (0.5%) or similar insecticide',
-        'Hand-pick affected bolls if infestation is low',
-        'Use pheromone traps for monitoring',
-        'Encourage natural predators',
+        'Pheromone traps',
+        'Encourage predators',
+      ],
+    },
+    'tomato_early_blight': {
+      'name': 'Early Blight',
+      'description': 'Brown concentric rings on leaves',
+      'remedies': [
+        'Remove affected leaves',
+        'Avoid overhead watering',
+      ],
+    },
+    'potato_late_blight': {
+      'name': 'Late Blight',
+      'description': 'Rapid leaf decay in wet weather',
+      'remedies': [
+        'Improve drainage',
+        'Remove infected plants',
+      ],
+    },
+    'groundnut_leaf_spot': {
+      'name': 'Leaf Spot',
+      'description': 'Spots leading to defoliation',
+      'remedies': [
+        'Crop rotation',
+        'Remove residues',
+      ],
+    },
+    'sugarcane_red_rot': {
+      'name': 'Red Rot',
+      'description': 'Internal cane discoloration',
+      'remedies': [
+        'Use healthy setts',
+        'Remove infected clumps',
+      ],
+    },
+    'chili_leaf_curl': {
+      'name': 'Leaf Curl Disease',
+      'description': 'Viral disease causing curling',
+      'remedies': [
+        'Control insect vectors',
+        'Remove infected plants',
+      ],
+    },
+    'banana_panama': {
+      'name': 'Panama Disease',
+      'description': 'Soil-borne wilt disease',
+      'remedies': [
+        'Use disease-free saplings',
+        'Improve soil drainage',
       ],
     },
   };
 
-  /// ============================================================
-  /// CROP-DISEASE MAPPING
-  /// Define which diseases affect which crops
-  /// ============================================================
+  // ============================================================
+  // CROP → DISEASE
+  // ============================================================
   static const Map<String, List<String>> cropDiseases = {
-    'rice': ['blast', 'leaf_spot', 'yellowing_virus'],
-    'wheat': ['leaf_spot', 'powdery_mildew'],
-    'cotton': ['powdery_mildew', 'cotton_bollworm', 'leaf_spot'],
-    'tomato': ['early_blight', 'late_blight', 'powdery_mildew'],
-    'potato': ['early_blight', 'late_blight', 'root_rot'],
-    'groundnut': ['leaf_spot', 'root_rot'],
-    'sugarcane': ['leaf_spot', 'yellowing_virus'],
-    'maize': ['leaf_spot', 'powdery_mildew'],
+    'rice': ['rice_blast'],
+    'wheat': ['wheat_rust'],
+    'maize': ['maize_leaf_blight'],
+    'cotton': ['cotton_bollworm'],
+    'tomato': ['tomato_early_blight'],
+    'potato': ['potato_late_blight'],
+    'groundnut': ['groundnut_leaf_spot'],
+    'sugarcane': ['sugarcane_red_rot'],
+    'chili': ['chili_leaf_curl'],
+    'banana': ['banana_panama'],
   };
 
-  /// ============================================================
-  /// DISEASE-SYMPTOM MAPPING
-  /// Define which symptoms indicate which diseases
-  /// ============================================================
+  // ============================================================
+  // DISEASE → SYMPTOMS
+  // ============================================================
   static const Map<String, List<String>> diseaseSymptoms = {
-    'blast': ['brown_spots', 'wilting'],
-    'leaf_spot': ['brown_spots', 'yellow_leaves'],
-    'powdery_mildew': ['powdery_coating', 'leaf_curl'],
-    'root_rot': ['root_rot', 'wilting'],
-    'early_blight': ['brown_spots', 'yellow_leaves'],
-    'late_blight': ['brown_spots', 'wilting'],
-    'yellowing_virus': ['yellow_leaves', 'leaf_curl'],
-    'cotton_bollworm': ['aphids'],
+    'rice_blast': ['brown_spots', 'wilting'],
+    'wheat_rust': ['brown_spots'],
+    'maize_leaf_blight': ['brown_spots'],
+    'cotton_bollworm': ['insect_presence'],
+    'tomato_early_blight': ['brown_spots', 'yellow_leaves'],
+    'potato_late_blight': ['brown_spots', 'wilting'],
+    'groundnut_leaf_spot': ['brown_spots'],
+    'sugarcane_red_rot': ['stem_lesions', 'wilting'],
+    'chili_leaf_curl': ['leaf_curl', 'yellow_leaves'],
+    'banana_panama': ['wilting', 'yellow_leaves'],
   };
 
-  /// Get all crops
-  static List<Crop> getCrops() {
-    return crops.entries.map((e) => Crop(id: e.key, name: e.value)).toList();
-  }
+  // ============================================================
+  // HELPERS
+  // ============================================================
 
-  /// Get all symptoms
-  static List<Symptom> getSymptoms() {
-    return symptoms.entries
-        .map(
-          (e) => Symptom(
+  static List<Crop> getCrops() => crops.entries
+      .map((e) => Crop(
+            id: e.key,
+            name: e.value['name']!,
+            imagePath: e.value['image']!,
+          ))
+      .toList();
+
+  static List<Symptom> getSymptoms() => symptoms.entries
+      .map((e) => Symptom(
             id: e.key,
             name: e.value['name']!,
             description: e.value['description']!,
-          ),
-        )
-        .toList();
-  }
+          ))
+      .toList();
 
-  /// Get diseases for a specific crop
   static List<Disease> getDiseasesForCrop(String cropId) {
-    final diseaseIds = cropDiseases[cropId] ?? [];
-    return diseaseIds.map((diseaseId) {
-      final data = diseases[diseaseId]!;
+    final ids = cropDiseases[cropId] ?? [];
+    return ids.map((id) {
+      final d = diseases[id]!;
       return Disease(
-        id: diseaseId,
-        name: data['name'] as String,
-        description: data['description'] as String,
-        remedies: List<String>.from(data['remedies'] as List),
+        id: id,
+        name: d['name'],
+        description: d['description'],
+        remedies: List<String>.from(d['remedies']),
       );
     }).toList();
   }
 
-  /// Get symptoms for a specific disease
   static List<Symptom> getSymptomsForDisease(String diseaseId) {
-    final symptomIds = diseaseSymptoms[diseaseId] ?? [];
-    return symptomIds.map((symptomId) {
-      final data = symptoms[symptomId]!;
+    final ids = diseaseSymptoms[diseaseId] ?? [];
+    return ids.map((id) {
+      final s = symptoms[id]!;
       return Symptom(
-        id: symptomId,
-        name: data['name']!,
-        description: data['description']!,
+        id: id,
+        name: s['name']!,
+        description: s['description']!,
       );
     }).toList();
-  }
-
-  /// Get disease by ID
-  static Disease? getDiseaseById(String diseaseId) {
-    final data = diseases[diseaseId];
-    if (data == null) return null;
-    return Disease(
-      id: diseaseId,
-      name: data['name'] as String,
-      description: data['description'] as String,
-      remedies: List<String>.from(data['remedies'] as List),
-    );
-  }
-
-  /// Get crop by ID
-  static Crop? getCropById(String cropId) {
-    final name = crops[cropId];
-    if (name == null) return null;
-    return Crop(id: cropId, name: name);
-  }
-
-  /// Get symptom by ID
-  static Symptom? getSymptomById(String symptomId) {
-    final data = symptoms[symptomId];
-    if (data == null) return null;
-    return Symptom(
-      id: symptomId,
-      name: data['name']!,
-      description: data['description']!,
-    );
   }
 }
