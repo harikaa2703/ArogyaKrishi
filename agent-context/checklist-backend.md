@@ -37,8 +37,8 @@
 
 ### B1.2 Base Folder Structure
 
-- [ ] Create `app/` package
-- [ ] Create `app/main.py`
+- [x] Create `app/` package
+- [x] Create `app/main.py`
 - [ ] Create `app/api/`
 - [ ] Create `app/services/`
 - [ ] Create `app/models/`
@@ -48,15 +48,15 @@
 
 ### B1.3 App Bootstrapping
 
-- [ ] Initialize FastAPI app
-- [ ] Add CORS middleware
-- [ ] Add startup event handler
-- [ ] Add shutdown handler
+- [x] Initialize FastAPI app
+- [x] Add CORS middleware
+- [x] Add startup event handler
+- [x] Add shutdown handler
 
 ### B1.4 Health & Sanity
 
-- [ ] Add `/health` endpoint
-- [ ] Add `/version` endpoint
+- [x] Add `/health` endpoint
+- [x] Add `/version` endpoint
 - [ ] Verify app runs via Uvicorn
 
 ---
