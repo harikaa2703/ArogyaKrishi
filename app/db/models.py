@@ -2,6 +2,7 @@
 
 All persistent data for the application is managed through these models:
 - DetectionEvent: Disease detections from user uploads (includes location for nearby alerts)
+- DiseaseSearch: Search history of diseases for users to review
 - User: Device/user profiles for push notifications (optional, for future expansion)
 - SentAlert: Tracking of alerts sent to users (optional, for future expansion)
 """
@@ -60,6 +61,29 @@ class User(Base):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
+
+
+class DiseaseSearch(Base):
+    """
+    Stores history of disease searches by users.
+    
+    Used for:
+    - Maintaining search history per device/user
+    - Allowing users to browse previously searched diseases
+    - Analytics on disease trends
+    """
+    
+    __tablename__ = "disease_searches"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    device_token = Column(String, nullable=True, index=True)  # Optional device identifier
+    crop = Column(String, nullable=False, index=True)
+    disease = Column(String, nullable=False, index=True)
+    confidence = Column(Float, nullable=False)
+    latitude = Column(Float, nullable=True, index=True)
+    longitude = Column(Float, nullable=True, index=True)
+    language = Column(String, nullable=False, default="en")
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
 
 class SentAlert(Base):

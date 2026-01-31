@@ -5,6 +5,7 @@ Manages environment variables, settings, and application-wide configuration.
 
 from pydantic_settings import BaseSettings
 from typing import Optional
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
 
     
     class Config:
-        env_file = ".env"
+        env_file = str(Path(__file__).resolve().parent.parent / ".env")
         env_file_encoding = "utf-8"
         extra = "ignore"  # Ignore extra fields from .env
 

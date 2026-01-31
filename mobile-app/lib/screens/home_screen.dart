@@ -6,11 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/image_service.dart';
 import '../services/api_service.dart';
 import '../services/offline_detector.dart';
+import '../services/search_cache_service.dart';
 import '../models/detection_result.dart';
 import '../models/nearby_alert.dart';
 import 'offline_detection_screen.dart';
 import 'detection_result_screen.dart';
 import 'chat_screen.dart';
+import 'search_history_screen.dart';
 import '../utils/constants.dart';
 import '../utils/localization.dart';
 
@@ -436,9 +438,26 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
+      // Get device token for search history
+      final deviceToken = await _getDeviceToken();
+
+      // Get current position for location tracking
+      final position = await _getCurrentPosition();
+
       final result = await _apiService.detectImage(
         imageFile: _selectedImage!,
         language: _languageCode,
+        deviceToken: deviceToken,
+        lat: position?.latitude,
+        lng: position?.longitude,
+      );
+
+      // Cache the result locally with image
+      await SearchCacheService.saveSearch(
+        result: result,
+        imageFile: _selectedImage,
+        latitude: position?.latitude,
+        longitude: position?.longitude,
       );
 
       setState(() {
@@ -480,6 +499,19 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(_t('app_title')),
         centerTitle: true,
         actions: [
+          // Search History button
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SearchHistoryScreen(),
+                ),
+              );
+            },
+            tooltip: 'Search History',
+          ),
           // Chat button
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),

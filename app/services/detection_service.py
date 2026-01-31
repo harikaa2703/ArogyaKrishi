@@ -7,6 +7,7 @@ from ..utils.image_processor import preprocess_image
 from .ml_service import get_model_loader
 from .remedy_service import RemedyService
 from .detection_repository import DetectionRepository
+from .search_repository import SearchRepository
 from .user_repository import UserRepository
 from .notification_service import send_push_notification
 
@@ -22,6 +23,7 @@ class DetectionService:
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
         language: str = "en",
+        device_token: Optional[str] = None,
         db_session: Optional[AsyncSession] = None
     ) -> Dict:
         """
@@ -32,6 +34,7 @@ class DetectionService:
             latitude: Optional location latitude
             longitude: Optional location longitude
             language: Language code (en, te, hi)
+            device_token: Optional device token for search history tracking
             db_session: Optional database session to save event
         
         Returns:
@@ -67,6 +70,19 @@ class DetectionService:
                         latitude=latitude,
                         longitude=longitude
                     )
+                    
+                    # Save to search history
+                    await SearchRepository.save_search(
+                        db_session,
+                        crop=crop,
+                        disease=disease,
+                        confidence=confidence,
+                        language=language,
+                        device_token=device_token,
+                        latitude=latitude,
+                        longitude=longitude
+                    )
+                    
                     await DetectionService._notify_nearby_users(
                         disease=disease,
                         latitude=latitude,

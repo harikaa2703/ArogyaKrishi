@@ -62,6 +62,9 @@ dependencies:
   # Local cache for preferences
   shared_preferences: ^2.2.3
 
+  # Date formatting
+  intl: ^0.19.0
+
   # Speech-to-text for voice input
   speech_to_text: ^7.0.0
 

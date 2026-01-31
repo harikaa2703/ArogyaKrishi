@@ -14,6 +14,24 @@ class DetectImageResponse(BaseModel):
     language: str
 
 
+class DiseaseSearchItem(BaseModel):
+    """Single disease search history item."""
+    id: int
+    crop: str
+    disease: str
+    confidence: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    language: str
+    created_at: datetime
+
+
+class SearchHistoryResponse(BaseModel):
+    """Response model for /search-history endpoint."""
+    searches: List[DiseaseSearchItem]
+    total_count: int
+
+
 class AlertData(BaseModel):
     """Alert item model."""
     disease: str

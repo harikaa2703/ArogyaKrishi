@@ -16,10 +16,13 @@ from ..models.schemas import (
     PesticideStoreResponse,
     RegisterDeviceRequest,
     RegisterDeviceResponse,
+    SearchHistoryResponse,
+    DiseaseSearchItem,
 )
 from ..services.detection_service import DetectionService
 from ..services.remedy_service import RemedyService
 from ..services.user_repository import UserRepository
+from ..services.search_repository import SearchRepository
 from ..db.session import get_db
 
 logger = logging.getLogger(__name__)
@@ -48,6 +51,7 @@ async def detect_image(
     lat: Optional[float] = Query(None, description="Latitude"),
     lng: Optional[float] = Query(None, description="Longitude"),
     language: str = Query("en", description="Language: en, te, hi, kn, ml"),
+    device_token: Optional[str] = Query(None, description="Device token for tracking search history"),
     db_session: AsyncSession = Depends(get_db),
 ) -> DetectImageResponse:
     """
@@ -57,6 +61,7 @@ async def detect_image(
     - **lat**: Optional latitude
     - **lng**: Optional longitude
     - **language**: Response language (en, te, hi, kn, ml)
+    - **device_token**: Optional device token to track search history
     """
     try:
         logger.info(f"Received detect-image request - filename: {image.filename}, content_type: {image.content_type}")
@@ -76,6 +81,7 @@ async def detect_image(
             latitude=lat,
             longitude=lng,
             language=language,
+            device_token=device_token,
             db_session=db_session,
         )
 
@@ -334,3 +340,146 @@ async def _fetch_nearby_stores(
         if last_error is not None:
             raise last_error
         return []
+
+@router.get("/search-history", response_model=SearchHistoryResponse)
+async def get_search_history(
+    device_token: Optional[str] = Query(None, description="Device token to retrieve history for specific device"),
+    limit: int = Query(50, description="Maximum number of results"),
+    offset: int = Query(0, description="Offset for pagination"),
+    db_session: AsyncSession = Depends(get_db),
+) -> SearchHistoryResponse:
+    """
+    Retrieve disease search history.
+    
+    - **device_token**: Optional device token to get history for a specific device
+    - **limit**: Maximum number of results (default 50)
+    - **offset**: Offset for pagination (default 0)
+    """
+    try:
+        logger.info(f"Fetching search history - device_token: {device_token}, limit: {limit}, offset: {offset}")
+        
+        searches, total_count = await SearchRepository.get_search_history(
+            db_session,
+            device_token=device_token,
+            limit=limit,
+            offset=offset
+        )
+        
+        items = [
+            DiseaseSearchItem(
+                id=search.id,
+                crop=search.crop,
+                disease=search.disease,
+                confidence=search.confidence,
+                latitude=search.latitude,
+                longitude=search.longitude,
+                language=search.language,
+                created_at=search.created_at
+            )
+            for search in searches
+        ]
+        
+        return SearchHistoryResponse(searches=items, total_count=total_count)
+    
+    except Exception as e:
+        logger.error(f"Error fetching search history: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving search history",
+        )
+
+
+@router.get("/search-history/unique-diseases")
+async def get_unique_diseases(
+    device_token: Optional[str] = Query(None, description="Device token to retrieve history for specific device"),
+    limit: int = Query(20, description="Maximum number of unique diseases"),
+    db_session: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Retrieve unique diseases from search history with metadata.
+    
+    - **device_token**: Optional device token to get history for a specific device
+    - **limit**: Maximum number of unique diseases (default 20)
+    """
+    try:
+        logger.info(f"Fetching unique diseases - device_token: {device_token}, limit: {limit}")
+        
+        diseases = await SearchRepository.get_unique_diseases(
+            db_session,
+            device_token=device_token,
+            limit=limit
+        )
+        
+        return {
+            "unique_diseases": diseases,
+            "count": len(diseases)
+        }
+    
+    except Exception as e:
+        logger.error(f"Error fetching unique diseases: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error retrieving unique diseases",
+        )
+
+
+@router.delete("/search-history/{search_id}")
+async def delete_search(
+    search_id: int,
+    db_session: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete a specific search record.
+    
+    - **search_id**: ID of the search record to delete
+    """
+    try:
+        logger.info(f"Deleting search record - search_id: {search_id}")
+        
+        deleted = await SearchRepository.delete_search(db_session, search_id)
+        
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Search record not found",
+            )
+        
+        return {"ok": True, "message": "Search record deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting search record: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error deleting search record",
+        )
+
+
+@router.delete("/search-history")
+async def clear_search_history(
+    device_token: Optional[str] = Query(None, description="Device token to clear history for specific device"),
+    db_session: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Clear search history for a device.
+    
+    - **device_token**: Optional device token to clear history for a specific device. If not provided, clears all history.
+    """
+    try:
+        logger.info(f"Clearing search history - device_token: {device_token}")
+        
+        count = await SearchRepository.clear_history(db_session, device_token=device_token)
+        
+        return {
+            "ok": True,
+            "deleted_count": count,
+            "message": f"Deleted {count} search records"
+        }
+    
+    except Exception as e:
+        logger.error(f"Error clearing search history: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error clearing search history",
+        )

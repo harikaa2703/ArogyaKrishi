@@ -5,6 +5,7 @@ import '../models/detection_result.dart';
 import '../models/nearby_alert.dart';
 import '../models/scan_treatment_result.dart';
 import '../models/suggested_treatments_response.dart';
+import '../models/disease_search.dart';
 import '../utils/constants.dart';
 
 /// API Service for ArogyaKrishi backend
@@ -21,6 +22,7 @@ class ApiService {
   /// - [lat]: Optional latitude for location
   /// - [lng]: Optional longitude for location
   /// - [language]: Optional language code (en, te, hi, kn, ml)
+  /// - [deviceToken]: Optional device token for tracking search history
   ///
   /// Returns: DetectionResult with crop, disease, confidence, and remedies
   Future<DetectionResult> detectImage({
@@ -28,6 +30,7 @@ class ApiService {
     double? lat,
     double? lng,
     String? language,
+    String? deviceToken,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/api/detect-image').replace(
@@ -35,6 +38,7 @@ class ApiService {
           if (language != null) 'language': language,
           if (lat != null) 'lat': lat.toString(),
           if (lng != null) 'lng': lng.toString(),
+          if (deviceToken != null) 'device_token': deviceToken,
         },
       );
       final url = uri.toString();
@@ -257,6 +261,126 @@ class ApiService {
       } else {
         throw ApiException(
           'Failed to fetch suggested treatments: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      throw ApiException('Network error: $e', 0);
+    }
+  }
+
+  /// Get disease search history
+  ///
+  /// Parameters:
+  /// - [deviceToken]: Optional device token to filter history
+  /// - [limit]: Maximum number of results (default 50)
+  /// - [offset]: Offset for pagination (default 0)
+  Future<SearchHistoryResponse> getSearchHistory({
+    String? deviceToken,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/search-history').replace(
+        queryParameters: {
+          if (deviceToken != null) 'device_token': deviceToken,
+          'limit': limit.toString(),
+          'offset': offset.toString(),
+        },
+      );
+
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body) as Map<String, dynamic>;
+        return SearchHistoryResponse.fromJson(jsonData);
+      } else {
+        throw ApiException(
+          'Failed to fetch search history: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      throw ApiException('Network error: $e', 0);
+    }
+  }
+
+  /// Get unique diseases from search history
+  ///
+  /// Parameters:
+  /// - [deviceToken]: Optional device token to filter history
+  /// - [limit]: Maximum number of unique diseases (default 20)
+  Future<List<UniqueDisease>> getUniqueDiseases({
+    String? deviceToken,
+    int limit = 20,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/search-history/unique-diseases')
+          .replace(
+            queryParameters: {
+              if (deviceToken != null) 'device_token': deviceToken,
+              'limit': limit.toString(),
+            },
+          );
+
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body) as Map<String, dynamic>;
+        final uniqueDiseases = (jsonData['unique_diseases'] as List)
+            .map((item) => UniqueDisease.fromJson(item as Map<String, dynamic>))
+            .toList();
+        return uniqueDiseases;
+      } else {
+        throw ApiException(
+          'Failed to fetch unique diseases: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      throw ApiException('Network error: $e', 0);
+    }
+  }
+
+  /// Delete a specific search record
+  ///
+  /// Parameters:
+  /// - [searchId]: ID of the search record to delete
+  Future<void> deleteSearch(int searchId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/search-history/$searchId'),
+      );
+
+      if (response.statusCode != 200) {
+        throw ApiException(
+          'Failed to delete search: ${response.statusCode}',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      throw ApiException('Network error: $e', 0);
+    }
+  }
+
+  /// Clear all search history for a device
+  ///
+  /// Parameters:
+  /// - [deviceToken]: Optional device token to clear history for
+  Future<int> clearSearchHistory({String? deviceToken}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/search-history').replace(
+        queryParameters: {if (deviceToken != null) 'device_token': deviceToken},
+      );
+
+      final response = await http.delete(uri);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body) as Map<String, dynamic>;
+        return jsonData['deleted_count'] as int;
+      } else {
+        throw ApiException(
+          'Failed to clear history: ${response.statusCode}',
           response.statusCode,
         );
       }

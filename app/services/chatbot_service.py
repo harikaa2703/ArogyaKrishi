@@ -130,23 +130,27 @@ class ChatbotService:
         cls.add_to_history(session_id, "user", message)
         
         reply = None
-        try:
-            client = cls._get_client()
+        use_openai = bool(settings.openai_api_key)
+        if use_openai:
+            try:
+                client = cls._get_client()
 
-            history = _sessions.get(session_id, [])
-            messages = [
-                {"role": "system", "content": cls._build_system_prompt(language)},
-                *history,
-            ]
+                history = _sessions.get(session_id, [])
+                messages = [
+                    {"role": "system", "content": cls._build_system_prompt(language)},
+                    *history,
+                ]
 
-            response = await client.chat.completions.create(
-                model=settings.openai_chat_model,
-                messages=messages,
-                temperature=0.3,
-            )
-            reply = (response.choices[0].message.content or "").strip()
-        except Exception as e:
-            logger.warning(f"OpenAI chat failed, falling back to stub: {e}")
+                response = await client.chat.completions.create(
+                    model=settings.openai_chat_model,
+                    messages=messages,
+                    temperature=0.3,
+                )
+                reply = (response.choices[0].message.content or "").strip()
+            except Exception as e:
+                logger.error(f"OpenAI chat failed: {e}")
+                raise
+        else:
             responses = cls.RESPONSES.get(language, cls.RESPONSES["en"])
             reply = random.choice(responses)
         
@@ -185,41 +189,47 @@ class ChatbotService:
         session_id = cls.get_session_id(session_id)
         
         transcribed_text = "[Voice message received]"
-        try:
-            client = cls._get_client()
-            audio_file = io.BytesIO(audio_bytes)
-            audio_file.name = "audio.wav"
+        use_openai = bool(settings.openai_api_key)
+        if use_openai:
+            try:
+                client = cls._get_client()
+                audio_file = io.BytesIO(audio_bytes)
+                audio_file.name = "audio.wav"
 
-            stt_kwargs = {"model": settings.openai_stt_model, "file": audio_file}
-            if language in {"en", "hi", "te", "kn", "ml"}:
-                stt_kwargs["language"] = language
+                stt_kwargs = {"model": settings.openai_stt_model, "file": audio_file}
+                if language in {"en", "hi", "te", "kn", "ml"}:
+                    stt_kwargs["language"] = language
 
-            transcription = await client.audio.transcriptions.create(**stt_kwargs)
-            transcribed_text = (transcription.text or "").strip() or transcribed_text
-        except Exception as e:
-            logger.warning(f"OpenAI transcription failed, using placeholder: {e}")
+                transcription = await client.audio.transcriptions.create(**stt_kwargs)
+                transcribed_text = (transcription.text or "").strip() or transcribed_text
+            except Exception as e:
+                logger.error(f"OpenAI transcription failed: {e}")
+                raise
         
         # Add user message to history
         cls.add_to_history(session_id, "user", transcribed_text)
         
         reply = None
-        try:
-            client = cls._get_client()
+        if use_openai:
+            try:
+                client = cls._get_client()
 
-            history = _sessions.get(session_id, [])
-            messages = [
-                {"role": "system", "content": cls._build_system_prompt(language)},
-                *history,
-            ]
+                history = _sessions.get(session_id, [])
+                messages = [
+                    {"role": "system", "content": cls._build_system_prompt(language)},
+                    *history,
+                ]
 
-            response = await client.chat.completions.create(
-                model=settings.openai_chat_model,
-                messages=messages,
-                temperature=0.3,
-            )
-            reply = (response.choices[0].message.content or "").strip()
-        except Exception as e:
-            logger.warning(f"OpenAI chat failed, falling back to stub: {e}")
+                response = await client.chat.completions.create(
+                    model=settings.openai_chat_model,
+                    messages=messages,
+                    temperature=0.3,
+                )
+                reply = (response.choices[0].message.content or "").strip()
+            except Exception as e:
+                logger.error(f"OpenAI chat failed: {e}")
+                raise
+        else:
             responses = cls.RESPONSES.get(language, cls.RESPONSES["en"])
             reply = random.choice(responses)
         
@@ -230,20 +240,21 @@ class ChatbotService:
         message_id = str(uuid.uuid4())
         
         audio_url = None
-        try:
-            client = cls._get_client()
-            tts_response = await client.audio.speech.create(
-                model=settings.openai_tts_model,
-                voice=settings.openai_tts_voice,
-                input=reply,
-            )
-            audio_bytes = await tts_response.read()
-            audio_id = str(uuid.uuid4())
-            cls._audio_store[audio_id] = audio_bytes
-            cls._audio_mime[audio_id] = "audio/mpeg"
-            audio_url = f"/api/chat/audio/{audio_id}"
-        except Exception as e:
-            logger.warning(f"OpenAI TTS failed, returning no audio: {e}")
+        if use_openai:
+            try:
+                client = cls._get_client()
+                tts_response = await client.audio.speech.create(
+                    model=settings.openai_tts_model,
+                    voice=settings.openai_tts_voice,
+                    input=reply,
+                )
+                audio_bytes = await tts_response.read()
+                audio_id = str(uuid.uuid4())
+                cls._audio_store[audio_id] = audio_bytes
+                cls._audio_mime[audio_id] = "audio/mpeg"
+                audio_url = f"/api/chat/audio/{audio_id}"
+            except Exception as e:
+                logger.warning(f"OpenAI TTS failed, returning no audio: {e}")
         
         logger.info(f"Generated voice response for session {session_id}")
         

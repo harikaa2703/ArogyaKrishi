@@ -8,11 +8,40 @@ ArogyaKrishi is a mobile application designed to help farmers detect crop diseas
 - 🔍 **Disease Detection** - Upload images for AI-powered crop disease detection (requires backend)
 - 💊 **Remedy Recommendations** - Get actionable remedies for detected diseases
 - 🗺️ **Nearby Alerts** - View disease alerts in your vicinity
+- 📜 **Search History** - Browse and review previous disease searches ✨ NEW!
 - 🌐 **Multi-language Support** - English, Telugu, and Hindi
-- 📴 **Offline Mode** - Complete disease diagnosis without internet ✨ NEW!
+- 📴 **Offline Mode** - Complete disease diagnosis without internet
 - 🔔 **Local Reminders** - Set reminders for treatment schedules
 
-## Offline Mode (NEW!)
+## Search History (NEW!)
+
+The app now tracks all your disease searches, allowing you to review past detections and their results.
+
+### How to Use Search History
+
+1. **Access History** - Tap the history icon (🕐) in the top app bar
+2. **Browse Searches** - Scroll through your previous disease detections
+3. **View Details** - Tap any search to see full details including:
+   - Disease name and crop type
+   - Confidence score
+   - Date and time of search
+   - Location (if available)
+   - Language used
+4. **Delete Searches** - Swipe left on any item to delete it
+5. **Clear All** - Tap the "Clear All" button to remove all history
+
+### Features
+
+- **Automatic Tracking** - All disease detections are automatically saved
+- **Device-Specific** - History is tracked per device using device ID
+- **Pagination** - Loads 20 searches at a time for better performance
+- **Pull to Refresh** - Swipe down to refresh your history
+- **Color-Coded Confidence** - Visual indicators for detection confidence:
+  - 🟢 Green: 80%+ (High confidence)
+  - 🟠 Orange: 60-80% (Medium confidence)
+  - 🔴 Red: Below 60% (Low confidence)
+
+## Offline Mode
 
 The app now includes a complete offline diagnosis system that works without an internet connection. This allows farmers to perform crop disease diagnosis anywhere, anytime.
 

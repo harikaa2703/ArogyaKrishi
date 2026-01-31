@@ -7,6 +7,7 @@ from typing import Optional
 
 from ..models.chat import ChatTextRequest, ChatResponse
 from ..services.chatbot_service import ChatbotService
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +115,18 @@ async def chat_voice(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing voice message"
         )
+
+
+@router.get("/status")
+async def chat_status() -> dict:
+    """Expose whether OpenAI is enabled and current model config."""
+    return {
+        "openai_enabled": bool(settings.openai_api_key),
+        "chat_model": settings.openai_chat_model,
+        "stt_model": settings.openai_stt_model,
+        "tts_model": settings.openai_tts_model,
+        "tts_voice": settings.openai_tts_voice,
+    }
 
 
 @router.get("/audio/{audio_id}")
