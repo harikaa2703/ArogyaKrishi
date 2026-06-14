@@ -1,34 +1,60 @@
-# ArogyaKrishi
+# 🌾 ArogyaKrishi
 
-Crop disease detection and guidance system with a FastAPI backend and Flutter mobile app.
+> AI-powered crop disease detection and treatment guidance — straight from your phone.
 
-## Prerequisites
+ArogyaKrishi pairs a Flutter mobile app with a FastAPI backend to help farmers identify crop diseases from photos and get actionable treatment recommendations.
+
+---
+
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Prerequisites](#-prerequisites)
+- [Backend Setup](#-backend-setup)
+- [Mobile App Setup](#-mobile-app-setup)
+- [Project Layout](#-project-layout)
+
+---
+
+## 🧠 Overview
+
+Snap a photo of an affected crop, and ArogyaKrishi analyzes it to detect disease and suggest the right next steps — built for accessibility and ease of use in the field.
+
+---
+
+## ⚙️ Prerequisites
 
 - Python 3.13
-- PostgreSQL (local)
+- PostgreSQL (local instance)
 - Flutter SDK
 
-## Backend setup
+---
+
+## 🚀 Backend Setup
 
 ```bash
 cd /home/dead/repos/ArogyaKrishi
 bash scripts/setup-postgres.sh
 cp .env.example .env
+
 cd app
 ./venv/bin/pip install -r requirements.txt
+
 PYTHONPATH=/home/dead/repos/ArogyaKrishi:$PYTHONPATH \
 ./venv/bin/python -m app.db.init_db
+
 PYTHONPATH=/home/dead/repos/ArogyaKrishi:$PYTHONPATH \
 ./venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
-Health check:
-
+**Health check:**
 ```bash
 curl http://localhost:8001/health
 ```
 
-## Mobile app setup
+---
+
+## 📱 Mobile App Setup
 
 ```bash
 cd /home/dead/repos/ArogyaKrishi/mobile-app
@@ -36,10 +62,13 @@ flutter pub get
 flutter run
 ```
 
-## Project layout
+---
+
+## 📂 Project Layout
 
 ```
-app/          # FastAPI backend
-mobile-app/   # Flutter mobile app
-scripts/      # helper scripts
+ArogyaKrishi/
+├── app/          # FastAPI backend
+├── mobile-app/   # Flutter mobile app
+└── scripts/      # Setup & helper scripts
 ```
